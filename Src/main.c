@@ -40,10 +40,6 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-//-----STUPID LIBRARY KEEPS ON WIPING LD4 DEFINITION!!!
-//-------------------ARRRGH. Patching here:
-#define LD4_Pin GPIO_PIN_12
-#define LD4_GPIO_Port GPIOD
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -51,8 +47,25 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim5;
 
 /* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
+//Tm = [1ms-10min]
+#define TM_MAX 0x23C34600
+#define TM_MIN 0x3E8
+//Pm = []
+#define PM_MAX 
+#define PM_MIN
+//Ts = []
+#define TS_MAX
+#define TS_MIN
+//Dt = []
+#define TS_MAX
+#define TS_MIN
 
+//-----STUPID LIBRARY KEEPS ON WIPING LD4 DEFINITION!!!
+//-------------------ARRRGH. Patching here:
+#define LD4_Pin GPIO_PIN_12
+#define LD4_GPIO_Port GPIOD
+/* Private variables ---------------------------------------------------------*/
+uint32_t Tm,Ts,Pm,Dt,Ps;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,7 +83,30 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
+uint8_t SetPulse(uint32_t Tm, uint32_t Pm, uint32_t Ps, uint32_t Dt){
+    HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Stop(&htim5, TIM_CHANNEL_3);
+    
+    Dt += 1;
+    Ts=Tm-Pm-Dt;
+    Tm -= 1;
+    Pm -= 1;
+    Ps -= 1;
+    
+    /* if something is wrong with data then return 1; */
+    
+    /* Writing registers */
+    TIM2->ARR = Tm;
+    TIM2->CCR1 = Pm;
+    
+    TIM5->ARR = Ts;
+    TIM5->CCR3 = Ps;
+    /* Start timers */
+    
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_3);
+    return 0;
+}
 /* USER CODE END 0 */
 
 /**
@@ -81,15 +117,9 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-    uint32_t Tm=0x001E8480;
-    uint32_t Pm=0x0007A120;
-    //if Pm>=Tm?
-    uint32_t Ps=0x0003D090;
-    //if Pm>=Tm?
-    uint32_t Dt=0x0003D090;
-    //if BAD Dt?
-    uint32_t Ts=Tm-Pm-Dt;
-    //if BAD Ts?
+
+    /* END Correction mtf */
+    
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -113,24 +143,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_GPIO_WritePin(GPIOD,LD4_Pin,GPIO_PIN_SET);
-//  HAL_GPIO_WritePin(GPIOD,LD3_Pin,GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOD,LD5_Pin,GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOD,LD6_Pin,GPIO_PIN_SET);
-//  HAL_GPIO_TogglePin(GPIOD,12);
-//  HAL_GPIO_TogglePin(GPIOD,13);
-//  HAL_GPIO_TogglePin(GPIOD,14);
-//  HAL_GPIO_TogglePin(GPIOD,15);
-
-HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_3);
-
-//=============if needed OPM=============
-//  if (HAL_TIM_OnePulse_Init(&htim5, TIM_OPMODE_SINGLE) != HAL_OK)
-//  {
-//    _Error_Handler(__FILE__, __LINE__);
-//  }
-
 
   /* USER CODE END 2 */
 
@@ -140,10 +153,13 @@ HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_3);
   {
     //CODE HERE
   /* USER CODE END WHILE */
-
+    
   /* USER CODE BEGIN 3 */
-    //CODE HERE
-    HAL_Delay(100);
+    HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
+    (void) SetPulse(4, 1, 1, 1);
+    HAL_Delay(300);
+    (void) SetPulse(3, 1, 1, 0);
+    HAL_Delay(300);
   }
   /* USER CODE END 3 */
 
